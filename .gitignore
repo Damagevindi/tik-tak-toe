@@ -1,0 +1,14 @@
+# Firebase Config - Nicht committen!
+firebase-config.js
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

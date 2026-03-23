@@ -4,6 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tik Tak Toe</title>
+    <script type="module">
+        // Firebase SDK import
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, onValue, update, remove, onDisconnect } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase config - loaded from external file
+        let firebaseConfig = null;
+        let app = null;
+        let db = null;
+
+        // Load config from external file
+        async function loadFirebaseConfig() {
+            try {
+                const response = await fetch('./firebase-config.js');
+                if (!response.ok) throw new Error('Config not found');
+                const text = await response.text();
+                // Extract config object from the file
+                const match = text.match(/const\s+firebaseConfig\s*=\s*({[\s\S]*?});/);
+                if (match) {
+                    firebaseConfig = eval('(' + match[1] + ')');
+                    app = initializeApp(firebaseConfig);
+                    db = getDatabase(app);
+                    console.log('Firebase initialized');
+                }
+            } catch (e) {
+                console.log('Firebase config not loaded - online mode unavailable');
+            }
+        }
+
+        // Make Firebase available globally for the game class
+        window.loadFirebaseConfig = loadFirebaseConfig;
+        window.firebaseDB = () => db;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseOnValue = onValue;
+        window.firebaseUpdate = update;
+        window.firebaseRemove = remove;
+        window.firebaseOnDisconnect = onDisconnect;
+
+        loadFirebaseConfig();
+    </script>
     <style>
         * {
             margin: 0;
@@ -75,37 +116,140 @@
             border-color: transparent;
         }
 
-        .difficulty-selector {
+        .online-menu {
             display: none;
-            gap: 10px;
+            flex-direction: column;
+            gap: 15px;
             margin-bottom: 20px;
-            justify-content: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
         }
 
-        .difficulty-selector.visible {
+        .online-menu.visible {
             display: flex;
         }
 
-        .difficulty-btn {
-            padding: 8px 16px;
-            font-size: 0.85em;
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            text-align: left;
+        }
+
+        .input-group label {
+            font-size: 0.9em;
+            color: #666;
             font-weight: bold;
-            border: 2px solid #ff9800;
-            border-radius: 20px;
+        }
+
+        .input-group input {
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .online-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            padding: 12px 25px;
+            font-size: 0.95em;
+            font-weight: bold;
+            border: 2px solid #28a745;
+            border-radius: 25px;
             cursor: pointer;
             transition: all 0.3s ease;
             background: white;
-            color: #ff9800;
+            color: #28a745;
         }
 
-        .difficulty-btn:hover {
-            background: #fff3e0;
-        }
-
-        .difficulty-btn.active {
-            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        .btn-secondary:hover {
+            background: #28a745;
             color: white;
-            border-color: transparent;
+        }
+
+        .game-code-display {
+            display: none;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .game-code-display.visible {
+            display: block;
+        }
+
+        .players-info {
+            display: none;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .players-info.visible {
+            display: flex;
+        }
+
+        .player-info {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .player-info.you {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .player-info.opponent {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .connection-status {
+            display: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .connection-status.visible {
+            display: inline-block;
+        }
+
+        .connection-status.connected {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .connection-status.waiting {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .connection-status.disconnected {
+            background: #ffebee;
+            color: #c62828;
         }
 
         .status {
@@ -343,6 +487,25 @@
             .version {
                 font-size: 0.65em;
             }
+
+            .online-menu {
+                padding: 15px;
+            }
+
+            .input-group input {
+                padding: 10px 12px;
+                font-size: 0.95em;
+            }
+
+            .btn-secondary {
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+
+            .player-info {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
         }
 
         @media (max-width: 360px) {
@@ -378,14 +541,37 @@
             <button class="mode-btn active" data-mode="pvp">👥 2 Spieler</button>
             <button class="mode-btn" data-mode="ai-easy">🤖 vs KI (Einfach)</button>
             <button class="mode-btn" data-mode="ai-hard">🤖 vs KI (Brutal)</button>
+            <button class="mode-btn" data-mode="online">🌐 Online</button>
         </div>
 
-        <div class="difficulty-selector" id="difficulty-selector">
-            <button class="difficulty-btn" data-difficulty="easy">👶 Einfach</button>
-            <button class="difficulty-btn active" data-difficulty="hard">💀 Brutal</button>
+        <div class="online-menu" id="online-menu">
+            <div class="input-group">
+                <label for="player-name">Dein Spielername</label>
+                <input type="text" id="player-name" placeholder="z.B. MaxMustermann" maxlength="15">
+            </div>
+            <div class="online-buttons">
+                <button class="btn-secondary" id="create-game">🎮 Spiel erstellen</button>
+                <button class="btn-secondary" id="join-game">🔗 Spiel beitreten</button>
+            </div>
+            <div class="input-group" id="join-code-group" style="display: none;">
+                <label for="game-code-input">Spiel-Code</label>
+                <input type="text" id="game-code-input" placeholder="z.B. ABC123" maxlength="6">
+                <button class="btn-secondary" id="confirm-join" style="margin-top: 10px;">Beitreten</button>
+            </div>
         </div>
+
+        <div class="game-code-display" id="game-code-display">
+            🎮 Dein Spiel-Code: <span id="game-code"></span>
+        </div>
+
+        <div class="players-info" id="players-info">
+            <div class="player-info you" id="player-you">Du: -</div>
+            <div class="player-info opponent" id="player-opponent">Gegner: Warte...</div>
+        </div>
+
+        <div class="connection-status" id="connection-status">Verbindung wird hergestellt...</div>
         
-        <div class="score-board">
+        <div class="score-board" id="score-board">
             <div class="score">
                 <div class="score-label">Spieler X</div>
                 <div class="score-value score-x" id="score-x">0</div>
@@ -418,7 +604,7 @@
         
         <div class="footer">
             Viel Spaß beim Spielen! 🦀
-            <div class="version">v1.3.0</div>
+            <div class="version">v2.0.0</div>
         </div>
     </div>
 
@@ -429,15 +615,26 @@
                 this.currentPlayer = 'X';
                 this.gameActive = true;
                 this.scores = { X: 0, O: 0, draw: 0 };
-                this.gameMode = 'pvp'; // 'pvp', 'ai-easy', 'ai-hard'
+                this.gameMode = 'pvp';
                 this.aiPlayer = 'O';
                 this.humanPlayer = 'X';
+                
+                // Online mode variables
+                this.isOnlineMode = false;
+                this.gameId = null;
+                this.playerName = '';
+                this.playerSymbol = null;
+                this.opponentName = '';
+                this.isHost = false;
+                this.gameRef = null;
+                this.unsubscribe = null;
                 
                 this.statusElement = document.getElementById('status');
                 this.boardElement = document.getElementById('board');
                 this.restartButton = document.getElementById('restart-btn');
                 this.subtitleElement = document.getElementById('subtitle');
                 this.scoreOLabel = document.getElementById('score-o-label');
+                this.scoreBoard = document.getElementById('score-board');
                 
                 this.winningCombinations = [
                     [0, 1, 2], [3, 4, 5], [6, 7, 8],
@@ -456,42 +653,295 @@
                 
                 this.restartButton.addEventListener('click', () => this.restartGame());
                 
-                // Mode selector
                 document.querySelectorAll('.mode-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => this.setGameMode(e.target.dataset.mode));
                 });
+
+                // Online mode setup
+                this.setupOnlineMode();
+            }
+
+            setupOnlineMode() {
+                const createBtn = document.getElementById('create-game');
+                const joinBtn = document.getElementById('join-game');
+                const confirmJoinBtn = document.getElementById('confirm-join');
+                const joinCodeGroup = document.getElementById('join-code-group');
+
+                createBtn.addEventListener('click', () => this.createOnlineGame());
+                joinBtn.addEventListener('click', () => {
+                    joinCodeGroup.style.display = 'flex';
+                    joinCodeGroup.style.flexDirection = 'column';
+                });
+                confirmJoinBtn.addEventListener('click', () => this.joinOnlineGame());
+            }
+
+            generateGameCode() {
+                return Math.random().toString(36).substring(2, 8).toUpperCase();
+            }
+
+            async createOnlineGame() {
+                const nameInput = document.getElementById('player-name');
+                this.playerName = nameInput.value.trim() || 'Spieler 1';
+                
+                if (!window.firebaseDB()) {
+                    alert('Firebase ist nicht verfügbar. Bitte firebase-config.js erstellen.');
+                    return;
+                }
+
+                this.gameId = this.generateGameCode();
+                this.isHost = true;
+                this.playerSymbol = 'X';
+                
+                const db = window.firebaseDB();
+                this.gameRef = window.firebaseRef(db, `games/${this.gameId}`);
+                
+                await window.firebaseSet(this.gameRef, {
+                    board: Array(9).fill(''),
+                    currentPlayer: 'X',
+                    gameActive: true,
+                    host: { name: this.playerName, symbol: 'X', connected: true },
+                    guest: { name: null, symbol: null, connected: false },
+                    status: 'waiting',
+                    createdAt: Date.now()
+                });
+
+                // Setup disconnect handler
+                const disconnectRef = window.firebaseRef(db, `games/${this.gameId}/host/connected`);
+                window.firebaseOnDisconnect(disconnectRef).set(false);
+
+                this.showGameCode();
+                this.listenToGame();
+                this.updateConnectionStatus('waiting', 'Warte auf Gegner...');
+            }
+
+            async joinOnlineGame() {
+                const nameInput = document.getElementById('player-name');
+                const codeInput = document.getElementById('game-code-input');
+                
+                this.playerName = nameInput.value.trim() || 'Spieler 2';
+                this.gameId = codeInput.value.trim().toUpperCase();
+                
+                if (!this.gameId) {
+                    alert('Bitte gib einen Spiel-Code ein!');
+                    return;
+                }
+
+                if (!window.firebaseDB()) {
+                    alert('Firebase ist nicht verfügbar.');
+                    return;
+                }
+
+                const db = window.firebaseDB();
+                this.gameRef = window.firebaseRef(db, `games/${this.gameId}`);
+                
+                // Check if game exists
+                const snapshot = await new Promise(resolve => {
+                    window.firebaseOnValue(this.gameRef, resolve, { onlyOnce: true });
+                });
+                
+                const gameData = snapshot.val();
+                if (!gameData) {
+                    alert('Spiel nicht gefunden!');
+                    return;
+                }
+                
+                if (gameData.status !== 'waiting') {
+                    alert('Spiel ist bereits voll!');
+                    return;
+                }
+
+                this.isHost = false;
+                this.playerSymbol = 'O';
+                
+                await window.firebaseUpdate(this.gameRef, {
+                    'guest': { name: this.playerName, symbol: 'O', connected: true },
+                    'status': 'playing'
+                });
+
+                // Setup disconnect handler
+                const disconnectRef = window.firebaseRef(db, `games/${this.gameId}/guest/connected`);
+                window.firebaseOnDisconnect(disconnectRef).set(false);
+
+                document.getElementById('join-code-group').style.display = 'none';
+                this.listenToGame();
+            }
+
+            showGameCode() {
+                document.getElementById('game-code').textContent = this.gameId;
+                document.getElementById('game-code-display').classList.add('visible');
+                document.getElementById('online-menu').classList.remove('visible');
+            }
+
+            listenToGame() {
+                if (this.unsubscribe) this.unsubscribe();
+                
+                this.unsubscribe = window.firebaseOnValue(this.gameRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) return;
+                    
+                    this.syncGameState(data);
+                });
+            }
+
+            syncGameState(data) {
+                // Update board
+                this.board = data.board || Array(9).fill('');
+                this.currentPlayer = data.currentPlayer;
+                this.gameActive = data.gameActive;
+                
+                // Update UI
+                this.cells.forEach((cell, index) => {
+                    cell.textContent = this.board[index];
+                    cell.className = 'cell';
+                    if (this.board[index]) {
+                        cell.classList.add('taken', this.board[index].toLowerCase());
+                    }
+                });
+
+                // Update player info
+                const isHost = this.isHost;
+                const hostName = data.host?.name || 'Host';
+                const guestName = data.guest?.name || 'Warte...';
+                
+                document.getElementById('player-you').textContent = `Du: ${this.playerName} (${this.playerSymbol})`;
+                document.getElementById('player-opponent').textContent = 
+                    `Gegner: ${isHost ? guestName : hostName} (${isHost ? 'O' : 'X'})`;
+                document.getElementById('players-info').classList.add('visible');
+
+                // Update connection status
+                if (data.status === 'waiting') {
+                    this.updateConnectionStatus('waiting', 'Warte auf Gegner...');
+                } else if (data.host?.connected && data.guest?.connected) {
+                    this.updateConnectionStatus('connected', 'Verbunden!');
+                    this.updateStatus();
+                } else {
+                    this.updateConnectionStatus('disconnected', 'Gegner getrennt');
+                }
+
+                // Check winner
+                if (!this.gameActive) {
+                    const winner = this.checkWinnerFromBoard();
+                    if (winner) {
+                        this.highlightWinningCells(this.getWinningCombination());
+                    }
+                }
+            }
+
+            updateConnectionStatus(type, message) {
+                const statusEl = document.getElementById('connection-status');
+                statusEl.textContent = message;
+                statusEl.className = `connection-status visible ${type}`;
+            }
+
+            checkWinnerFromBoard() {
+                for (const combination of this.winningCombinations) {
+                    const [a, b, c] = combination;
+                    if (this.board[a] && 
+                        this.board[a] === this.board[b] && 
+                        this.board[a] === this.board[c]) {
+                        return this.board[a];
+                    }
+                }
+                return null;
+            }
+
+            getWinningCombination() {
+                for (const combination of this.winningCombinations) {
+                    const [a, b, c] = combination;
+                    if (this.board[a] && 
+                        this.board[a] === this.board[b] && 
+                        this.board[a] === this.board[c]) {
+                        return combination;
+                    }
+                }
+                return null;
             }
             
             setGameMode(mode) {
+                // Cleanup online mode if switching away
+                if (this.isOnlineMode && mode !== 'online') {
+                    this.cleanupOnlineMode();
+                }
+
                 this.gameMode = mode;
+                this.isOnlineMode = (mode === 'online');
                 
-                // Update UI
                 document.querySelectorAll('.mode-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.mode === mode);
                 });
+
+                const onlineMenu = document.getElementById('online-menu');
+                const gameCodeDisplay = document.getElementById('game-code-display');
+                const playersInfo = document.getElementById('players-info');
+                const connectionStatus = document.getElementById('connection-status');
                 
-                // Update subtitle and labels
-                if (mode === 'pvp') {
-                    this.subtitleElement.textContent = 'Zwei Spieler - Ein Sieger';
-                    this.scoreOLabel.textContent = 'Spieler O';
-                } else if (mode === 'ai-easy') {
-                    this.subtitleElement.textContent = '🍼 KI-Level: 5-Jähriger (Münzwurf wer startet!)';
-                } else if (mode === 'ai-hard') {
-                    this.subtitleElement.textContent = '💀 KI-Level: Brutal (Münzwurf wer startet!)';
+                if (mode === 'online') {
+                    onlineMenu.classList.add('visible');
+                    this.subtitleElement.textContent = '🌐 Online Multiplayer';
+                    this.scoreBoard.style.display = 'none';
+                } else {
+                    onlineMenu.classList.remove('visible');
+                    gameCodeDisplay.classList.remove('visible');
+                    playersInfo.classList.remove('visible');
+                    connectionStatus.classList.remove('visible');
+                    this.scoreBoard.style.display = 'grid';
+                    
+                    if (mode === 'pvp') {
+                        this.subtitleElement.textContent = 'Zwei Spieler - Ein Sieger';
+                        this.scoreOLabel.textContent = 'Spieler O';
+                    } else if (mode === 'ai-easy') {
+                        this.subtitleElement.textContent = '🍼 KI-Level: 5-Jähriger (Münzwurf wer startet!)';
+                    } else if (mode === 'ai-hard') {
+                        this.subtitleElement.textContent = '💀 KI-Level: Brutal (Münzwurf wer startet!)';
+                    }
                 }
                 
                 this.restartGame();
             }
+
+            cleanupOnlineMode() {
+                if (this.unsubscribe) {
+                    this.unsubscribe();
+                    this.unsubscribe = null;
+                }
+                if (this.gameRef && this.isHost) {
+                    window.firebaseRemove(this.gameRef);
+                }
+                this.gameId = null;
+                this.playerSymbol = null;
+            }
             
-            handleCellClick(e) {
+            async handleCellClick(e) {
                 const index = parseInt(e.target.dataset.index);
                 
                 if (this.board[index] !== '' || !this.gameActive) {
                     return;
                 }
+
+                // Online mode: only allow if it's your turn
+                if (this.isOnlineMode && this.currentPlayer !== this.playerSymbol) {
+                    return;
+                }
                 
-                // Human move
                 this.makeMove(index, this.currentPlayer);
+                
+                // Update Firebase in online mode
+                if (this.isOnlineMode) {
+                    const nextPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+                    let updates = {
+                        board: this.board,
+                        currentPlayer: nextPlayer
+                    };
+                    
+                    if (this.checkWin()) {
+                        updates.gameActive = false;
+                    } else if (this.checkDraw()) {
+                        updates.gameActive = false;
+                    }
+                    
+                    await window.firebaseUpdate(this.gameRef, updates);
+                    return;
+                }
                 
                 if (this.checkWin()) {
                     this.endGame(false);
@@ -500,7 +950,6 @@
                 } else {
                     this.switchPlayer();
                     
-                    // AI turn
                     if (this.gameMode !== 'pvp' && this.currentPlayer === this.aiPlayer) {
                         this.makeAIMove();
                     }
@@ -515,11 +964,10 @@
             }
             
             async makeAIMove() {
-                this.gameActive = false; // Block input during AI thinking
+                this.gameActive = false;
                 this.statusElement.textContent = '🤖 KI denkt...';
                 this.statusElement.className = 'status ai-thinking';
                 
-                // Small delay for realism
                 await new Promise(resolve => setTimeout(resolve, 600));
                 
                 let move;
@@ -541,43 +989,33 @@
                 }
             }
             
-            // EASY AI: Like a 5-year-old - random moves with occasional mistakes
             getEasyAIMove() {
                 const availableMoves = this.getAvailableMoves();
                 
-                // 30% chance to make a completely random move (like a child not paying attention)
                 if (Math.random() < 0.3) {
                     return availableMoves[Math.floor(Math.random() * availableMoves.length)];
                 }
                 
-                // 40% chance to miss a winning move or block
                 const shouldMissOpportunity = Math.random() < 0.4;
                 
                 if (!shouldMissOpportunity) {
-                    // Try to win
                     const winningMove = this.findWinningMove(this.aiPlayer);
                     if (winningMove !== null) return winningMove;
                     
-                    // Try to block opponent
                     const blockingMove = this.findWinningMove(this.humanPlayer);
                     if (blockingMove !== null) return blockingMove;
                 }
                 
-                // Sometimes pick center if available (kids like the middle)
                 if (availableMoves.includes(4) && Math.random() < 0.5) {
                     return 4;
                 }
                 
-                // Random from available
                 return availableMoves[Math.floor(Math.random() * availableMoves.length)];
             }
             
-            // HARD AI: Minimax algorithm - perfect play
             getHardAIMove() {
-                // First move: center is best
                 if (this.board[4] === '') return 4;
                 
-                // Use minimax for perfect play
                 let bestScore = -Infinity;
                 let bestMove = null;
                 
@@ -596,7 +1034,6 @@
             }
             
             minimax(board, depth, isMaximizing) {
-                // Check terminal states
                 if (this.checkWinningPlayer(this.aiPlayer)) return 10 - depth;
                 if (this.checkWinningPlayer(this.humanPlayer)) return depth - 10;
                 if (this.getAvailableMoves().length === 0) return 0;
@@ -656,7 +1093,15 @@
             }
             
             updateStatus() {
-                if (this.gameMode !== 'pvp' && this.currentPlayer === this.aiPlayer) {
+                if (this.isOnlineMode) {
+                    if (this.currentPlayer === this.playerSymbol) {
+                        this.statusElement.textContent = `Du bist dran (${this.playerSymbol})`;
+                        this.statusElement.className = 'status player-' + this.playerSymbol.toLowerCase();
+                    } else {
+                        this.statusElement.textContent = `Gegner ist dran...`;
+                        this.statusElement.className = 'status ai-thinking';
+                    }
+                } else if (this.gameMode !== 'pvp' && this.currentPlayer === this.aiPlayer) {
                     this.statusElement.textContent = `🤖 KI (${this.aiPlayer}) ist dran`;
                     this.statusElement.className = 'status ai-thinking';
                 } else if (this.gameMode !== 'pvp') {
@@ -715,14 +1160,24 @@
                 this.board = Array(9).fill('');
                 this.gameActive = true;
                 
-                // Randomly assign X and O for AI modes
+                if (this.isOnlineMode) {
+                    // Reset online game
+                    if (this.gameRef && this.isHost) {
+                        window.firebaseUpdate(this.gameRef, {
+                            board: Array(9).fill(''),
+                            currentPlayer: 'X',
+                            gameActive: true
+                        });
+                    }
+                    return;
+                }
+                
                 if (this.gameMode !== 'pvp') {
                     const coinFlip = Math.random() < 0.5;
                     this.humanPlayer = coinFlip ? 'X' : 'O';
                     this.aiPlayer = coinFlip ? 'O' : 'X';
-                    this.currentPlayer = 'X'; // X always starts
+                    this.currentPlayer = 'X';
                     
-                    // Update labels based on assignment
                     const humanLabel = this.humanPlayer === 'X' ? 'Spieler X (Du)' : 'Spieler X (KI)';
                     const aiLabel = this.aiPlayer === 'O' ? '🤖 KI (O)' : '🤖 KI (X)';
                     document.querySelector('.score-label').textContent = humanLabel;
@@ -742,7 +1197,6 @@
                 
                 this.updateStatus();
                 
-                // If AI starts (AI is X), make first move
                 if (this.gameMode !== 'pvp' && this.aiPlayer === 'X') {
                     this.makeAIMove();
                 }
