@@ -41,8 +41,71 @@
 
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 1.1em;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            color: #667eea;
+        }
+
+        .mode-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .difficulty-selector {
+            display: none;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .difficulty-selector.visible {
+            display: flex;
+        }
+
+        .difficulty-btn {
+            padding: 8px 16px;
+            font-size: 0.85em;
+            font-weight: bold;
+            border: 2px solid #ff9800;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            color: #ff9800;
+        }
+
+        .difficulty-btn:hover {
+            background: #fff3e0;
+        }
+
+        .difficulty-btn.active {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            border-color: transparent;
         }
 
         .status {
@@ -75,6 +138,11 @@
         .status.draw {
             background: #fff3e0;
             color: #f57c00;
+        }
+
+        .status.ai-thinking {
+            background: #f3e5f5;
+            color: #7b1fa2;
         }
 
         @keyframes pulse {
@@ -216,13 +284,29 @@
             .game-board {
                 max-width: 280px;
             }
+
+            .mode-btn, .difficulty-btn {
+                font-size: 0.8em;
+                padding: 8px 12px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="game-container">
         <h1>🎮 Tik Tak Toe</h1>
-        <p class="subtitle">Zwei Spieler - Ein Sieger</p>
+        <p class="subtitle" id="subtitle">Zwei Spieler - Ein Sieger</p>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="pvp">👥 2 Spieler</button>
+            <button class="mode-btn" data-mode="ai-easy">🤖 vs KI (Einfach)</button>
+            <button class="mode-btn" data-mode="ai-hard">🤖 vs KI (Brutal)</button>
+        </div>
+
+        <div class="difficulty-selector" id="difficulty-selector">
+            <button class="difficulty-btn" data-difficulty="easy">👶 Einfach</button>
+            <button class="difficulty-btn active" data-difficulty="hard">💀 Brutal</button>
+        </div>
         
         <div class="score-board">
             <div class="score">
@@ -234,7 +318,7 @@
                 <div class="score-value score-draw" id="score-draw">0</div>
             </div>
             <div class="score">
-                <div class="score-label">Spieler O</div>
+                <div class="score-label" id="score-o-label">Spieler O</div>
                 <div class="score-value score-o" id="score-o">0</div>
             </div>
         </div>
@@ -267,15 +351,20 @@
                 this.currentPlayer = 'X';
                 this.gameActive = true;
                 this.scores = { X: 0, O: 0, draw: 0 };
+                this.gameMode = 'pvp'; // 'pvp', 'ai-easy', 'ai-hard'
+                this.aiPlayer = 'O';
+                this.humanPlayer = 'X';
                 
                 this.statusElement = document.getElementById('status');
                 this.boardElement = document.getElementById('board');
                 this.restartButton = document.getElementById('restart-btn');
+                this.subtitleElement = document.getElementById('subtitle');
+                this.scoreOLabel = document.getElementById('score-o-label');
                 
                 this.winningCombinations = [
-                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Reihen
-                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Spalten
-                    [0, 4, 8], [2, 4, 6]             // Diagonalen
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                    [0, 4, 8], [2, 4, 6]
                 ];
                 
                 this.init();
@@ -288,15 +377,44 @@
                 });
                 
                 this.restartButton.addEventListener('click', () => this.restartGame());
+                
+                // Mode selector
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setGameMode(e.target.dataset.mode));
+                });
+            }
+            
+            setGameMode(mode) {
+                this.gameMode = mode;
+                
+                // Update UI
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.mode === mode);
+                });
+                
+                // Update subtitle and labels
+                if (mode === 'pvp') {
+                    this.subtitleElement.textContent = 'Zwei Spieler - Ein Sieger';
+                    this.scoreOLabel.textContent = 'Spieler O';
+                } else if (mode === 'ai-easy') {
+                    this.subtitleElement.textContent = '🍼 KI-Level: 5-Jähriger (macht Fehler!)';
+                    this.scoreOLabel.textContent = '🤖 KI (Einfach)';
+                } else if (mode === 'ai-hard') {
+                    this.subtitleElement.textContent = '💀 KI-Level: Brutal (Unschlagbar!)';
+                    this.scoreOLabel.textContent = '🤖 KI (Brutal)';
+                }
+                
+                this.restartGame();
             }
             
             handleCellClick(e) {
-                const index = e.target.dataset.index;
+                const index = parseInt(e.target.dataset.index);
                 
                 if (this.board[index] !== '' || !this.gameActive) {
                     return;
                 }
                 
+                // Human move
                 this.makeMove(index, this.currentPlayer);
                 
                 if (this.checkWin()) {
@@ -305,6 +423,11 @@
                     this.endGame(true);
                 } else {
                     this.switchPlayer();
+                    
+                    // AI turn
+                    if (this.gameMode !== 'pvp' && this.currentPlayer === this.aiPlayer) {
+                        this.makeAIMove();
+                    }
                 }
             }
             
@@ -315,14 +438,155 @@
                 cell.classList.add('taken', player.toLowerCase());
             }
             
+            async makeAIMove() {
+                this.gameActive = false; // Block input during AI thinking
+                this.statusElement.textContent = '🤖 KI denkt...';
+                this.statusElement.className = 'status ai-thinking';
+                
+                // Small delay for realism
+                await new Promise(resolve => setTimeout(resolve, 600));
+                
+                let move;
+                if (this.gameMode === 'ai-easy') {
+                    move = this.getEasyAIMove();
+                } else {
+                    move = this.getHardAIMove();
+                }
+                
+                this.makeMove(move, this.aiPlayer);
+                this.gameActive = true;
+                
+                if (this.checkWin()) {
+                    this.endGame(false);
+                } else if (this.checkDraw()) {
+                    this.endGame(true);
+                } else {
+                    this.switchPlayer();
+                }
+            }
+            
+            // EASY AI: Like a 5-year-old - random moves with occasional mistakes
+            getEasyAIMove() {
+                const availableMoves = this.getAvailableMoves();
+                
+                // 30% chance to make a completely random move (like a child not paying attention)
+                if (Math.random() < 0.3) {
+                    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                }
+                
+                // 40% chance to miss a winning move or block
+                const shouldMissOpportunity = Math.random() < 0.4;
+                
+                if (!shouldMissOpportunity) {
+                    // Try to win
+                    const winningMove = this.findWinningMove(this.aiPlayer);
+                    if (winningMove !== null) return winningMove;
+                    
+                    // Try to block opponent
+                    const blockingMove = this.findWinningMove(this.humanPlayer);
+                    if (blockingMove !== null) return blockingMove;
+                }
+                
+                // Sometimes pick center if available (kids like the middle)
+                if (availableMoves.includes(4) && Math.random() < 0.5) {
+                    return 4;
+                }
+                
+                // Random from available
+                return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            }
+            
+            // HARD AI: Minimax algorithm - perfect play
+            getHardAIMove() {
+                // First move: center is best
+                if (this.board[4] === '') return 4;
+                
+                // Use minimax for perfect play
+                let bestScore = -Infinity;
+                let bestMove = null;
+                
+                for (const move of this.getAvailableMoves()) {
+                    this.board[move] = this.aiPlayer;
+                    const score = this.minimax(this.board, 0, false);
+                    this.board[move] = '';
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+                
+                return bestMove;
+            }
+            
+            minimax(board, depth, isMaximizing) {
+                // Check terminal states
+                if (this.checkWinningPlayer(this.aiPlayer)) return 10 - depth;
+                if (this.checkWinningPlayer(this.humanPlayer)) return depth - 10;
+                if (this.getAvailableMoves().length === 0) return 0;
+                
+                if (isMaximizing) {
+                    let bestScore = -Infinity;
+                    for (const move of this.getAvailableMoves()) {
+                        board[move] = this.aiPlayer;
+                        const score = this.minimax(board, depth + 1, false);
+                        board[move] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                    for (const move of this.getAvailableMoves()) {
+                        board[move] = this.humanPlayer;
+                        const score = this.minimax(board, depth + 1, true);
+                        board[move] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                    return bestScore;
+                }
+            }
+            
+            getAvailableMoves() {
+                return this.board
+                    .map((cell, index) => cell === '' ? index : null)
+                    .filter(index => index !== null);
+            }
+            
+            findWinningMove(player) {
+                for (const move of this.getAvailableMoves()) {
+                    this.board[move] = player;
+                    const wins = this.checkWinningPlayer(player);
+                    this.board[move] = '';
+                    if (wins) return move;
+                }
+                return null;
+            }
+            
+            checkWinningPlayer(player) {
+                for (const combination of this.winningCombinations) {
+                    const [a, b, c] = combination;
+                    if (this.board[a] === player && 
+                        this.board[b] === player && 
+                        this.board[c] === player) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
             switchPlayer() {
                 this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
                 this.updateStatus();
             }
             
             updateStatus() {
-                this.statusElement.textContent = `Spieler ${this.currentPlayer} ist dran`;
-                this.statusElement.className = 'status player-' + this.currentPlayer.toLowerCase();
+                if (this.gameMode !== 'pvp' && this.currentPlayer === this.aiPlayer) {
+                    this.statusElement.textContent = '🤖 KI ist dran';
+                    this.statusElement.className = 'status ai-thinking';
+                } else {
+                    this.statusElement.textContent = `Spieler ${this.currentPlayer} ist dran`;
+                    this.statusElement.className = 'status player-' + this.currentPlayer.toLowerCase();
+                }
             }
             
             checkWin() {
@@ -357,7 +621,10 @@
                     this.scores.draw++;
                     document.getElementById('score-draw').textContent = this.scores.draw;
                 } else {
-                    this.statusElement.textContent = `🎉 Spieler ${this.currentPlayer} gewinnt!`;
+                    const winnerName = this.currentPlayer === this.aiPlayer && this.gameMode !== 'pvp' 
+                        ? '🤖 KI' 
+                        : `Spieler ${this.currentPlayer}`;
+                    this.statusElement.textContent = `🎉 ${winnerName} gewinnt!`;
                     this.statusElement.className = 'status winner';
                     this.scores[this.currentPlayer]++;
                     document.getElementById(`score-${this.currentPlayer.toLowerCase()}`).textContent = 
@@ -379,7 +646,6 @@
             }
         }
         
-        // Spiel starten
         document.addEventListener('DOMContentLoaded', () => {
             new TikTakToe();
         });
