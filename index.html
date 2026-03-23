@@ -9,45 +9,37 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, onValue, update, remove, onDisconnect, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import firebaseConfig from './firebase-config.js';
 
-        // Firebase config - loaded from external file
-        let firebaseConfig = null;
+        // Initialize Firebase
         let app = null;
         let db = null;
         let auth = null;
         let currentUser = null;
 
-        // Load config from external file
-        async function loadFirebaseConfig() {
+        async function initFirebase() {
             try {
-                const response = await fetch('./firebase-config.js');
-                if (!response.ok) throw new Error('Config not found');
-                const text = await response.text();
-                // Extract config object from the file
-                const match = text.match(/const\s+firebaseConfig\s*=\s*({[\s\S]*?});/);
-                if (match) {
-                    firebaseConfig = eval('(' + match[1] + ')');
-                    app = initializeApp(firebaseConfig);
-                    db = getDatabase(app);
-                    auth = getAuth(app);
-                    
-                    // Anonymous authentication for secure access
-                    await signInAnonymously(auth);
-                    
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            currentUser = user;
-                            console.log('Firebase authenticated - UID:', user.uid);
-                        }
-                    });
-                }
+                app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                auth = getAuth(app);
+                
+                // Anonymous authentication for secure access
+                await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        console.log('Firebase authenticated - UID:', user.uid);
+                    }
+                });
+                
+                console.log('Firebase initialized successfully');
             } catch (e) {
-                console.log('Firebase config not loaded - online mode unavailable:', e);
+                console.error('Firebase initialization failed:', e);
             }
         }
 
         // Make Firebase available globally for the game class
-        window.loadFirebaseConfig = loadFirebaseConfig;
         window.firebaseDB = () => db;
         window.firebaseAuth = () => auth;
         window.firebaseCurrentUser = () => currentUser;
@@ -59,7 +51,7 @@
         window.firebaseOnDisconnect = onDisconnect;
         window.firebaseServerTimestamp = serverTimestamp;
 
-        loadFirebaseConfig();
+        initFirebase();
     </script>
     <style>
         * {
