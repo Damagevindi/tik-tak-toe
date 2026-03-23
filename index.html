@@ -397,11 +397,9 @@
                     this.subtitleElement.textContent = 'Zwei Spieler - Ein Sieger';
                     this.scoreOLabel.textContent = 'Spieler O';
                 } else if (mode === 'ai-easy') {
-                    this.subtitleElement.textContent = '🍼 KI-Level: 5-Jähriger (macht Fehler!)';
-                    this.scoreOLabel.textContent = '🤖 KI (Einfach)';
+                    this.subtitleElement.textContent = '🍼 KI-Level: 5-Jähriger (Münzwurf wer startet!)';
                 } else if (mode === 'ai-hard') {
-                    this.subtitleElement.textContent = '💀 KI-Level: Brutal (Unschlagbar!)';
-                    this.scoreOLabel.textContent = '🤖 KI (Brutal)';
+                    this.subtitleElement.textContent = '💀 KI-Level: Brutal (Münzwurf wer startet!)';
                 }
                 
                 this.restartGame();
@@ -581,8 +579,11 @@
             
             updateStatus() {
                 if (this.gameMode !== 'pvp' && this.currentPlayer === this.aiPlayer) {
-                    this.statusElement.textContent = '🤖 KI ist dran';
+                    this.statusElement.textContent = `🤖 KI (${this.aiPlayer}) ist dran`;
                     this.statusElement.className = 'status ai-thinking';
+                } else if (this.gameMode !== 'pvp') {
+                    this.statusElement.textContent = `Du (${this.humanPlayer}) bist dran`;
+                    this.statusElement.className = 'status player-' + this.currentPlayer.toLowerCase();
                 } else {
                     this.statusElement.textContent = `Spieler ${this.currentPlayer} ist dran`;
                     this.statusElement.className = 'status player-' + this.currentPlayer.toLowerCase();
@@ -622,8 +623,8 @@
                     document.getElementById('score-draw').textContent = this.scores.draw;
                 } else {
                     const winnerName = this.currentPlayer === this.aiPlayer && this.gameMode !== 'pvp' 
-                        ? '🤖 KI' 
-                        : `Spieler ${this.currentPlayer}`;
+                        ? `🤖 KI (${this.aiPlayer})` 
+                        : (this.gameMode !== 'pvp' ? `Du (${this.humanPlayer})` : `Spieler ${this.currentPlayer}`);
                     this.statusElement.textContent = `🎉 ${winnerName} gewinnt!`;
                     this.statusElement.className = 'status winner';
                     this.scores[this.currentPlayer]++;
@@ -634,8 +635,27 @@
             
             restartGame() {
                 this.board = Array(9).fill('');
-                this.currentPlayer = 'X';
                 this.gameActive = true;
+                
+                // Randomly assign X and O for AI modes
+                if (this.gameMode !== 'pvp') {
+                    const coinFlip = Math.random() < 0.5;
+                    this.humanPlayer = coinFlip ? 'X' : 'O';
+                    this.aiPlayer = coinFlip ? 'O' : 'X';
+                    this.currentPlayer = 'X'; // X always starts
+                    
+                    // Update labels based on assignment
+                    const humanLabel = this.humanPlayer === 'X' ? 'Spieler X (Du)' : 'Spieler X (KI)';
+                    const aiLabel = this.aiPlayer === 'O' ? '🤖 KI (O)' : '🤖 KI (X)';
+                    document.querySelector('.score-label').textContent = humanLabel;
+                    this.scoreOLabel.textContent = aiLabel;
+                } else {
+                    this.humanPlayer = 'X';
+                    this.aiPlayer = 'O';
+                    this.currentPlayer = 'X';
+                    document.querySelector('.score-label').textContent = 'Spieler X';
+                    this.scoreOLabel.textContent = 'Spieler O';
+                }
                 
                 this.cells.forEach(cell => {
                     cell.textContent = '';
@@ -643,6 +663,11 @@
                 });
                 
                 this.updateStatus();
+                
+                // If AI starts (AI is X), make first move
+                if (this.gameMode !== 'pvp' && this.aiPlayer === 'X') {
+                    this.makeAIMove();
+                }
             }
         }
         
