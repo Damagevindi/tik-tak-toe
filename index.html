@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tik Tak Toe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f0f0f0;
+            color: #333;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .status.player-x {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.player-o {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .status.winner {
+            background: #e8f5e9;
+            color: #388e3c;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .status.draw {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: linear-gradient(145deg, #f5f5f5, #e0e0e0);
+            border: none;
+            border-radius: 15px;
+            font-size: 3em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff;
+            color: #333;
+        }
+
+        .cell:hover:not(.taken) {
+            transform: translateY(-3px);
+            box-shadow: 8px 8px 15px #d1d1d1, -8px -8px 15px #ffffff;
+        }
+
+        .cell:active:not(.taken) {
+            transform: translateY(0);
+            box-shadow: 3px 3px 8px #d1d1d1, -3px -3px 8px #ffffff;
+        }
+
+        .cell.taken {
+            cursor: not-allowed;
+        }
+
+        .cell.x {
+            color: #1976d2;
+            text-shadow: 2px 2px 4px rgba(25, 118, 210, 0.3);
+        }
+
+        .cell.o {
+            color: #c2185b;
+            text-shadow: 2px 2px 4px rgba(194, 24, 89, 0.3);
+        }
+
+        .cell.winning {
+            background: linear-gradient(145deg, #c8e6c9, #a5d6a7);
+            animation: winner-pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes winner-pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .score {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .score-x { color: #1976d2; }
+        .score-o { color: #c2185b; }
+        .score-draw { color: #f57c00; }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .cell {
+                font-size: 2.5em;
+            }
+
+            .game-board {
+                max-width: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 Tik Tak Toe</h1>
+        <p class="subtitle">Zwei Spieler - Ein Sieger</p>
+        
+        <div class="score-board">
+            <div class="score">
+                <div class="score-label">Spieler X</div>
+                <div class="score-value score-x" id="score-x">0</div>
+            </div>
+            <div class="score">
+                <div class="score-label">Unentschieden</div>
+                <div class="score-value score-draw" id="score-draw">0</div>
+            </div>
+            <div class="score">
+                <div class="score-label">Spieler O</div>
+                <div class="score-value score-o" id="score-o">0</div>
+            </div>
+        </div>
+
+        <div class="status player-x" id="status">Spieler X ist dran</div>
+        
+        <div class="game-board" id="board">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+        </div>
+
+        <button class="btn btn-primary" id="restart-btn">Neues Spiel</button>
+        
+        <div class="footer">
+            Viel Spaß beim Spielen! 🦀
+        </div>
+    </div>
+
+    <script>
+        class TikTakToe {
+            constructor() {
+                this.board = Array(9).fill('');
+                this.currentPlayer = 'X';
+                this.gameActive = true;
+                this.scores = { X: 0, O: 0, draw: 0 };
+                
+                this.statusElement = document.getElementById('status');
+                this.boardElement = document.getElementById('board');
+                this.restartButton = document.getElementById('restart-btn');
+                
+                this.winningCombinations = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Reihen
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Spalten
+                    [0, 4, 8], [2, 4, 6]             // Diagonalen
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                this.cells = this.boardElement.querySelectorAll('.cell');
+                this.cells.forEach(cell => {
+                    cell.addEventListener('click', (e) => this.handleCellClick(e));
+                });
+                
+                this.restartButton.addEventListener('click', () => this.restartGame());
+            }
+            
+            handleCellClick(e) {
+                const index = e.target.dataset.index;
+                
+                if (this.board[index] !== '' || !this.gameActive) {
+                    return;
+                }
+                
+                this.makeMove(index, this.currentPlayer);
+                
+                if (this.checkWin()) {
+                    this.endGame(false);
+                } else if (this.checkDraw()) {
+                    this.endGame(true);
+                } else {
+                    this.switchPlayer();
+                }
+            }
+            
+            makeMove(index, player) {
+                this.board[index] = player;
+                const cell = this.cells[index];
+                cell.textContent = player;
+                cell.classList.add('taken', player.toLowerCase());
+            }
+            
+            switchPlayer() {
+                this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+                this.updateStatus();
+            }
+            
+            updateStatus() {
+                this.statusElement.textContent = `Spieler ${this.currentPlayer} ist dran`;
+                this.statusElement.className = 'status player-' + this.currentPlayer.toLowerCase();
+            }
+            
+            checkWin() {
+                for (const combination of this.winningCombinations) {
+                    const [a, b, c] = combination;
+                    if (this.board[a] && 
+                        this.board[a] === this.board[b] && 
+                        this.board[a] === this.board[c]) {
+                        this.highlightWinningCells(combination);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            highlightWinningCells(combination) {
+                combination.forEach(index => {
+                    this.cells[index].classList.add('winning');
+                });
+            }
+            
+            checkDraw() {
+                return this.board.every(cell => cell !== '');
+            }
+            
+            endGame(isDraw) {
+                this.gameActive = false;
+                
+                if (isDraw) {
+                    this.statusElement.textContent = '🤝 Unentschieden!';
+                    this.statusElement.className = 'status draw';
+                    this.scores.draw++;
+                    document.getElementById('score-draw').textContent = this.scores.draw;
+                } else {
+                    this.statusElement.textContent = `🎉 Spieler ${this.currentPlayer} gewinnt!`;
+                    this.statusElement.className = 'status winner';
+                    this.scores[this.currentPlayer]++;
+                    document.getElementById(`score-${this.currentPlayer.toLowerCase()}`).textContent = 
+                        this.scores[this.currentPlayer];
+                }
+            }
+            
+            restartGame() {
+                this.board = Array(9).fill('');
+                this.currentPlayer = 'X';
+                this.gameActive = true;
+                
+                this.cells.forEach(cell => {
+                    cell.textContent = '';
+                    cell.className = 'cell';
+                });
+                
+                this.updateStatus();
+            }
+        }
+        
+        // Spiel starten
+        document.addEventListener('DOMContentLoaded', () => {
+            new TikTakToe();
+        });
+    </script>
+</body>
+</html>
