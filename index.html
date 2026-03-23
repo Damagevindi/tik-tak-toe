@@ -612,7 +612,7 @@
         
         <div class="footer">
             Viel Spaß beim Spielen! 🦀
-            <div class="version">v2.1.0</div>
+            <div class="version">v2.1.1</div>
         </div>
     </div>
 
@@ -696,11 +696,17 @@
                     return;
                 }
 
-                // Check if user is authenticated
-                const auth = window.firebaseAuth();
-                const currentUser = window.firebaseCurrentUser();
+                // Wait for authentication with timeout
+                let attempts = 0;
+                let currentUser = window.firebaseCurrentUser();
+                while (!currentUser && attempts < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    currentUser = window.firebaseCurrentUser();
+                    attempts++;
+                }
+                
                 if (!currentUser) {
-                    alert('Authentifizierung läuft... Bitte warte einen Moment und versuche es erneut.');
+                    alert('Authentifizierung fehlgeschlagen. Bitte lade die Seite neu und versuche es erneut.');
                     return;
                 }
 
@@ -711,28 +717,33 @@
                 const db = window.firebaseDB();
                 this.gameRef = window.firebaseRef(db, `games/${this.gameId}`);
                 
-                await window.firebaseSet(this.gameRef, {
-                    board: Array(9).fill(''),
-                    currentPlayer: 'X',
-                    gameActive: true,
-                    host: { 
-                        name: this.playerName, 
-                        symbol: 'X', 
-                        connected: true,
-                        uid: currentUser.uid
-                    },
-                    guest: { name: null, symbol: null, connected: false },
-                    status: 'waiting',
-                    createdAt: window.firebaseServerTimestamp()
-                });
+                try {
+                    await window.firebaseSet(this.gameRef, {
+                        board: Array(9).fill(''),
+                        currentPlayer: 'X',
+                        gameActive: true,
+                        host: { 
+                            name: this.playerName, 
+                            symbol: 'X', 
+                            connected: true,
+                            uid: currentUser.uid
+                        },
+                        guest: { name: null, symbol: null, connected: false },
+                        status: 'waiting',
+                        createdAt: window.firebaseServerTimestamp()
+                    });
 
-                // Setup disconnect handler
-                const disconnectRef = window.firebaseRef(db, `games/${this.gameId}/host/connected`);
-                window.firebaseOnDisconnect(disconnectRef).set(false);
+                    // Setup disconnect handler
+                    const disconnectRef = window.firebaseRef(db, `games/${this.gameId}/host/connected`);
+                    window.firebaseOnDisconnect(disconnectRef).set(false);
 
-                this.showGameCode();
-                this.listenToGame();
-                this.updateConnectionStatus('waiting', 'Warte auf Gegner...');
+                    this.showGameCode();
+                    this.listenToGame();
+                    this.updateConnectionStatus('waiting', 'Warte auf Gegner...');
+                } catch (error) {
+                    console.error('Error creating game:', error);
+                    alert('Fehler beim Erstellen des Spiels. Bitte versuche es erneut.');
+                }
             }
 
             async joinOnlineGame() {
@@ -752,10 +763,17 @@
                     return;
                 }
 
-                // Check if user is authenticated
-                const currentUser = window.firebaseCurrentUser();
+                // Wait for authentication with timeout
+                let attempts = 0;
+                let currentUser = window.firebaseCurrentUser();
+                while (!currentUser && attempts < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    currentUser = window.firebaseCurrentUser();
+                    attempts++;
+                }
+                
                 if (!currentUser) {
-                    alert('Authentifizierung läuft... Bitte warte einen Moment und versuche es erneut.');
+                    alert('Authentifizierung fehlgeschlagen. Bitte lade die Seite neu und versuche es erneut.');
                     return;
                 }
 
