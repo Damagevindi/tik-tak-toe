@@ -7,12 +7,15 @@
     <script type="module">
         // Firebase SDK import
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase, ref, set, onValue, update, remove, onDisconnect } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getDatabase, ref, set, onValue, update, remove, onDisconnect, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
         // Firebase config - loaded from external file
         let firebaseConfig = null;
         let app = null;
         let db = null;
+        let auth = null;
+        let currentUser = null;
 
         // Load config from external file
         async function loadFirebaseConfig() {
@@ -26,22 +29,35 @@
                     firebaseConfig = eval('(' + match[1] + ')');
                     app = initializeApp(firebaseConfig);
                     db = getDatabase(app);
-                    console.log('Firebase initialized');
+                    auth = getAuth(app);
+                    
+                    // Anonymous authentication for secure access
+                    await signInAnonymously(auth);
+                    
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            console.log('Firebase authenticated - UID:', user.uid);
+                        }
+                    });
                 }
             } catch (e) {
-                console.log('Firebase config not loaded - online mode unavailable');
+                console.log('Firebase config not loaded - online mode unavailable:', e);
             }
         }
 
         // Make Firebase available globally for the game class
         window.loadFirebaseConfig = loadFirebaseConfig;
         window.firebaseDB = () => db;
+        window.firebaseAuth = () => auth;
+        window.firebaseCurrentUser = () => currentUser;
         window.firebaseRef = ref;
         window.firebaseSet = set;
         window.firebaseOnValue = onValue;
         window.firebaseUpdate = update;
         window.firebaseRemove = remove;
         window.firebaseOnDisconnect = onDisconnect;
+        window.firebaseServerTimestamp = serverTimestamp;
 
         loadFirebaseConfig();
     </script>
@@ -604,7 +620,7 @@
         
         <div class="footer">
             Viel Spaß beim Spielen! 🦀
-            <div class="version">v2.0.0</div>
+            <div class="version">v2.1.0</div>
         </div>
     </div>
 
@@ -688,6 +704,14 @@
                     return;
                 }
 
+                // Check if user is authenticated
+                const auth = window.firebaseAuth();
+                const currentUser = window.firebaseCurrentUser();
+                if (!currentUser) {
+                    alert('Authentifizierung läuft... Bitte warte einen Moment und versuche es erneut.');
+                    return;
+                }
+
                 this.gameId = this.generateGameCode();
                 this.isHost = true;
                 this.playerSymbol = 'X';
@@ -699,10 +723,15 @@
                     board: Array(9).fill(''),
                     currentPlayer: 'X',
                     gameActive: true,
-                    host: { name: this.playerName, symbol: 'X', connected: true },
+                    host: { 
+                        name: this.playerName, 
+                        symbol: 'X', 
+                        connected: true,
+                        uid: currentUser.uid
+                    },
                     guest: { name: null, symbol: null, connected: false },
                     status: 'waiting',
-                    createdAt: Date.now()
+                    createdAt: window.firebaseServerTimestamp()
                 });
 
                 // Setup disconnect handler
@@ -731,6 +760,13 @@
                     return;
                 }
 
+                // Check if user is authenticated
+                const currentUser = window.firebaseCurrentUser();
+                if (!currentUser) {
+                    alert('Authentifizierung läuft... Bitte warte einen Moment und versuche es erneut.');
+                    return;
+                }
+
                 const db = window.firebaseDB();
                 this.gameRef = window.firebaseRef(db, `games/${this.gameId}`);
                 
@@ -750,11 +786,22 @@
                     return;
                 }
 
+                // Prevent joining your own game
+                if (gameData.host?.uid === currentUser.uid) {
+                    alert('Du kannst deinem eigenen Spiel nicht beitreten!');
+                    return;
+                }
+
                 this.isHost = false;
                 this.playerSymbol = 'O';
                 
                 await window.firebaseUpdate(this.gameRef, {
-                    'guest': { name: this.playerName, symbol: 'O', connected: true },
+                    'guest': { 
+                        name: this.playerName, 
+                        symbol: 'O', 
+                        connected: true,
+                        uid: currentUser.uid
+                    },
                     'status': 'playing'
                 });
 
