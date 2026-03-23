@@ -208,8 +208,9 @@
         }
 
         .score-board {
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
             margin-bottom: 30px;
             padding: 20px;
             background: #f8f9fa;
@@ -218,12 +219,21 @@
 
         .score {
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
         }
 
         .score-label {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
 
         .score-value {
@@ -270,24 +280,81 @@
 
         @media (max-width: 480px) {
             .game-container {
-                padding: 25px;
+                padding: 20px;
             }
 
             h1 {
-                font-size: 2em;
+                font-size: 1.8em;
+                letter-spacing: 2px;
+            }
+
+            .subtitle {
+                font-size: 0.95em;
             }
 
             .cell {
-                font-size: 2.5em;
+                font-size: 2.2em;
             }
 
             .game-board {
-                max-width: 280px;
+                max-width: 100%;
+                gap: 8px;
+            }
+
+            .mode-selector {
+                gap: 8px;
             }
 
             .mode-btn, .difficulty-btn {
-                font-size: 0.8em;
+                font-size: 0.75em;
                 padding: 8px 12px;
+            }
+
+            .score-board {
+                padding: 15px 10px;
+                gap: 10px;
+            }
+
+            .score-label {
+                font-size: 0.75em;
+                line-height: 1.2;
+            }
+
+            .score-value {
+                font-size: 1.6em;
+            }
+
+            .status {
+                font-size: 1.1em;
+                padding: 12px;
+            }
+
+            .btn {
+                padding: 12px 30px;
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .game-container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.6em;
+            }
+
+            .score-label {
+                font-size: 0.7em;
+            }
+
+            .score-value {
+                font-size: 1.4em;
+            }
+
+            .mode-btn {
+                font-size: 0.7em;
+                padding: 6px 10px;
             }
         }
     </style>
