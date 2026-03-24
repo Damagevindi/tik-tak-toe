@@ -658,7 +658,7 @@
         
         <div class="footer">
             Viel Spaß beim Spielen! 🦀
-            <div class="version">v2.1.3</div>
+            <div class="version">v2.1.4</div>
         </div>
     </div>
 
@@ -913,7 +913,7 @@
                 this.board = data.board || Array(9).fill('');
                 this.currentPlayer = data.currentPlayer;
                 this.gameActive = data.gameActive;
-                
+
                 // Update UI
                 this.cells.forEach((cell, index) => {
                     cell.textContent = this.board[index];
@@ -927,28 +927,38 @@
                 const isHost = this.isHost;
                 const hostName = data.host?.name || 'Host';
                 const guestName = data.guest?.name || 'Warte...';
-                
+
                 document.getElementById('player-you').textContent = `Du: ${this.playerName} (${this.playerSymbol})`;
-                document.getElementById('player-opponent').textContent = 
+                document.getElementById('player-opponent').textContent =
                     `Gegner: ${isHost ? guestName : hostName} (${isHost ? 'O' : 'X'})`;
                 document.getElementById('players-info').classList.add('visible');
 
                 // Update connection status
                 if (data.status === 'waiting') {
                     this.updateConnectionStatus('waiting', 'Warte auf Gegner...');
+                } else if (data.status === 'disconnected') {
+                    this.updateConnectionStatus('disconnected', 'Gegner getrennt');
                 } else if (data.host?.connected && data.guest?.connected) {
                     this.updateConnectionStatus('connected', 'Verbunden!');
                     this.updateStatus();
                 } else {
-                    this.updateConnectionStatus('disconnected', 'Gegner getrennt');
+                    this.updateConnectionStatus('waiting', 'Warte auf Gegner...');
                 }
 
-                // Check winner
+                // Check winner and update status
                 if (!this.gameActive) {
                     const winner = this.checkWinnerFromBoard();
                     if (winner) {
                         this.highlightWinningCells(this.getWinningCombination());
+                        const winnerName = winner === this.playerSymbol ? 'Du' : 'Gegner';
+                        this.statusElement.textContent = `🎉 ${winnerName} (${winner}) gewinnt!`;
+                        this.statusElement.className = 'status winner';
+                    } else if (this.board.every(cell => cell !== '')) {
+                        this.statusElement.textContent = '🤝 Unentschieden!';
+                        this.statusElement.className = 'status draw';
                     }
+                } else {
+                    this.updateStatus();
                 }
             }
 
@@ -990,23 +1000,23 @@
 
                 this.gameMode = mode;
                 this.isOnlineMode = (mode === 'online');
-                
+
                 document.querySelectorAll('.mode-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.mode === mode);
                 });
 
                 const onlineMenu = document.getElementById('online-menu');
-                const gameCodeDisplay = document.getElementById('game-code-display');
+                const gameCodeContainer = document.getElementById('game-code-container');
                 const playersInfo = document.getElementById('players-info');
                 const connectionStatus = document.getElementById('connection-status');
-                
+
                 if (mode === 'online') {
                     onlineMenu.classList.add('visible');
                     this.subtitleElement.textContent = '🌐 Online Multiplayer';
                     this.scoreBoard.style.display = 'none';
                 } else {
                     onlineMenu.classList.remove('visible');
-                    gameCodeDisplay.classList.remove('visible');
+                    gameCodeContainer.classList.remove('visible');
                     playersInfo.classList.remove('visible');
                     connectionStatus.classList.remove('visible');
                     this.scoreBoard.style.display = 'grid';
@@ -1029,27 +1039,51 @@
                     this.unsubscribe();
                     this.unsubscribe = null;
                 }
-                if (this.gameRef && this.isHost) {
-                    window.firebaseRemove(this.gameRef);
+                if (this.gameRef) {
+                    // Mark player as disconnected instead of deleting
+                    const db = window.firebaseDB();
+                    if (this.isHost) {
+                        window.firebaseUpdate(window.firebaseRef(db, `games/${this.gameId}`), {
+                            'host/connected': false,
+                            'status': 'disconnected'
+                        });
+                    } else {
+                        window.firebaseUpdate(window.firebaseRef(db, `games/${this.gameId}`), {
+                            'guest/connected': false,
+                            'status': 'disconnected'
+                        });
+                    }
                 }
                 this.gameId = null;
                 this.playerSymbol = null;
+                this.isHost = false;
             }
             
             async handleCellClick(e) {
                 const index = parseInt(e.target.dataset.index);
-                
+
                 if (this.board[index] !== '' || !this.gameActive) {
                     return;
                 }
 
-                // Online mode: only allow if it's your turn
-                if (this.isOnlineMode && this.currentPlayer !== this.playerSymbol) {
-                    return;
+                // Online mode: only allow if it's your turn and game is playing
+                if (this.isOnlineMode) {
+                    if (this.currentPlayer !== this.playerSymbol) {
+                        return;
+                    }
+                    // Check if opponent is connected
+                    const db = window.firebaseDB();
+                    const statusRef = window.firebaseRef(db, `games/${this.gameId}/status`);
+                    const snapshot = await new Promise(resolve => {
+                        window.firebaseOnValue(statusRef, resolve, { onlyOnce: true });
+                    });
+                    if (snapshot.val() !== 'playing') {
+                        return;
+                    }
                 }
-                
+
                 this.makeMove(index, this.currentPlayer);
-                
+
                 // Update Firebase in online mode
                 if (this.isOnlineMode) {
                     const nextPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
@@ -1057,13 +1091,13 @@
                         board: this.board,
                         currentPlayer: nextPlayer
                     };
-                    
+
                     if (this.checkWin()) {
                         updates.gameActive = false;
                     } else if (this.checkDraw()) {
                         updates.gameActive = false;
                     }
-                    
+
                     await window.firebaseUpdate(this.gameRef, updates);
                     return;
                 }
@@ -1284,10 +1318,10 @@
             restartGame() {
                 this.board = Array(9).fill('');
                 this.gameActive = true;
-                
+
                 if (this.isOnlineMode) {
-                    // Reset online game
-                    if (this.gameRef && this.isHost) {
+                    // Reset online game - both host and guest can restart
+                    if (this.gameRef) {
                         window.firebaseUpdate(this.gameRef, {
                             board: Array(9).fill(''),
                             currentPlayer: 'X',
